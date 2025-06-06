@@ -2,11 +2,11 @@ import ctypes
 from typing import Final
 import cv2
 import mediapipe as mp
-import imutils
 import keyboard
+import time
 
-from Formating.HandData import HandData
-from MouseController import MouseController
+from Formating.Hand.HandData import HandData
+from Mouse.MouseController import MouseController
 
 
 class HandControlApp:
@@ -14,7 +14,10 @@ class HandControlApp:
             self,
             hand_data: HandData,
             mouse_controller: MouseController,
-            esc_key: str = "esc"
+            esc_key: str = "o",
+            pause_key: str = "p",
+            daily_mode_key: str = "i",
+            game_mode_key: str = "u"
     ):
         self.__hand_data: HandData = hand_data
         self.__mouse_controller: MouseController = mouse_controller
@@ -22,8 +25,12 @@ class HandControlApp:
         self.__hands = mp.solutions.hands.Hands()
 
         self.__run_app: bool = True
+        self.__hand_vision: bool = True
 
         keyboard.add_hotkey(esc_key, self.__stop_app)
+        keyboard.add_hotkey(pause_key, self.__start_and_stop_vision)
+        keyboard.add_hotkey(daily_mode_key, self.__mouse_controller.start_daily_mode)
+        keyboard.add_hotkey(game_mode_key, self.__mouse_controller.start_game_mode)
 
     def mainloop(self) -> None:
         cap = cv2.VideoCapture(0 + cv2.CAP_DSHOW)
@@ -31,18 +38,21 @@ class HandControlApp:
         flip_code: Final[int] = 1
 
         while self.__run_app:
-            self.__update_hand_data(
-                cv2.flip(
-                    imutils.resize(
+            while self.__hand_vision and self.__run_app:
+                self.__update_hand_data(
+                    cv2.flip(
                         cap.read()[1],
-                        width=monitor_size[0],
-                        height=monitor_size[1]
+                        flip_code
                     ),
-                    flip_code
+                    monitor_size
                 )
-            )
 
-            self.__mouse_controller.check_mouse()
+                self.__mouse_controller.check_mouse()
+
+            time.sleep(0.1)
+
+    def __start_and_stop_vision(self) -> None:
+        self.__hand_vision = not self.__hand_vision
 
     def __stop_app(self) -> None:
         self.__run_app = False
@@ -52,7 +62,10 @@ class HandControlApp:
         user32.SetProcessDPIAware()
         return [user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)]
 
-    def __update_hand_data(self, image):
+    def __calc_normal_coord(self, monitor_side: int, lm_coord) -> int:
+        return int(round(monitor_side * lm_coord))
+
+    def __update_hand_data(self, image, monitor_size: list[int]) -> None:
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         results = self.__hands.process(gray_image)
 
@@ -62,8 +75,8 @@ class HandControlApp:
                 for id, lm in enumerate(handLms.landmark):
 
                     self.__hand_data.get_data(id).set_coord(
-                        image.shape[1] * lm.x,
-                        image.shape[0] * lm.y
+                        self.__calc_normal_coord(monitor_size[0], lm.x),
+                        self.__calc_normal_coord(monitor_size[1], lm.y)
                     )
 
             self.__mouse_controller.hand_found()

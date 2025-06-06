@@ -1,6 +1,6 @@
 from typing import Final
 
-from Formating.HandPointData import HandPointData
+from Formating.Hand.HandPointData import HandPointData
 
 
 class HandData:

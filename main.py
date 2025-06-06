@@ -1,6 +1,6 @@
-from Formating.HandData import HandData
+from Formating.Hand.HandData import HandData
 from HandControlApp import HandControlApp
-from MouseController import MouseController
+from Mouse.MouseController import MouseController
 
 if __name__ == "__main__":
     hand_data: HandData = HandData()
