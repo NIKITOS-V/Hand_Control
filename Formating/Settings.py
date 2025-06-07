@@ -20,3 +20,6 @@ class Settings:
 
     def get_id_second_point(self) -> int:
         return self.__id_second_point
+
+    def set_activate_distance(self, distance: int) -> None:
+        self.__activate_distance = distance
